@@ -9,7 +9,7 @@ def compress_dct_frames(signal, frame_size, k):
     frames = signal[:len(signal) - len(signal) % frame_size].reshape(-1, frame_size)
     rec = []
     for frame in frames:
-        C = dct(frame, norm="ortho") # ortho - unitarna - zapewnia dokładne odwrotność
+        C = dct(frame, norm="ortho")
         C[k:] = 0
         rec.append(idct(C, norm="ortho"))
     return np.array(rec).flatten()
@@ -20,14 +20,13 @@ def compress_dct_overlap(signal, frame_size, k, hop=None):
     output = np.zeros(len(signal))
     counts = np.zeros(len(signal))
     for start in range(0, len(signal) - frame_size, hop):
-        # moment wycinania ramki biezacej
         frame = signal[start:start + frame_size]
         C = dct(frame, norm="ortho")
         C[k:] = 0
         rec = idct(C, norm="ortho")
         output[start:start + frame_size] += rec
         counts[start:start + frame_size] += 1
-    counts[counts == 0] = 1 #by uśrednić
+    counts[counts == 0] = 1
     return output / counts
 
 
@@ -188,6 +187,10 @@ def compress_dct_psycho(signal, sr, frame_size, k_total, spreading_db=12):
     weights[weights == 0] = 1
     return output / weights
 
+def file_size_kb(k, frame_size, signal_len, bits=32):
+    hop = frame_size // 2
+    n_frames = (signal_len - frame_size) // hop
+    return n_frames * k * bits / 8 / 1024
 
 def compress_dct_psycho_quantized(signal, sr, frame_size, k_total, spreading_db=36, bits=16):
     hop    = frame_size // 2
@@ -234,3 +237,197 @@ def compress_dct_psycho_quantized(signal, sr, frame_size, k_total, spreading_db=
 
     weights[weights == 0] = 1
     return output / weights
+
+# dct_utils.py — dodaj na końcu pliku
+import heapq
+import struct
+import os
+from collections import Counter
+from scipy.fft import dct, idct
+
+def huffman_build(data):
+    freq = Counter(data)
+    heap = [[w, [sym, ""]] for sym, w in freq.items()]
+    heapq.heapify(heap)
+    while len(heap) > 1:
+        lo = heapq.heappop(heap)
+        hi = heapq.heappop(heap)
+        for pair in lo[1:]: pair[1] = '0' + pair[1]
+        for pair in hi[1:]: pair[1] = '1' + pair[1]
+        heapq.heappush(heap, [lo[0] + hi[0]] + lo[1:] + hi[1:])
+    return {sym: code for sym, code in heap[0][1:]}
+
+def huffman_encode_bits(data, codebook):
+    bits = "".join(codebook[s] for s in data)
+    pad  = (8 - len(bits) % 8) % 8
+    bits += "0" * pad
+    return bytes(int(bits[i:i+8], 2) for i in range(0, len(bits), 8)), pad
+
+def huffman_decode_bits(encoded_bytes, pad, codebook, n_symbols):
+    bits    = "".join(f"{b:08b}" for b in encoded_bytes)
+    bits    = bits[:len(bits) - pad] if pad else bits
+    reverse = {v: k for k, v in codebook.items()}
+    result, cur = [], ""
+    for b in bits:
+        cur += b
+        if cur in reverse:
+            result.append(reverse[cur])
+            cur = ""
+            if len(result) == n_symbols:
+                break
+    return result
+
+def encode_psycho_huffman(signal, sr, frame_size, k, spreading_db=36, bits=8, path="out.bin"):
+    hop    = frame_size // 2
+    window = np.sin(np.pi / frame_size * (np.arange(frame_size) + 0.5))
+    bands  = bark_bands(frame_size, sr)
+    levels = 2 ** (bits - 1) - 1
+    dtype  = np.int16 if bits == 16 else np.int8
+
+    frames_encoded = []
+    all_quant_vals = []
+
+    for start in range(0, len(signal) - frame_size, hop):
+        frame = signal[start:start + frame_size] * window
+        C     = dct(frame, norm="ortho")
+        power = C ** 2
+
+        mask = np.zeros(frame_size)
+        for band_idx in bands:
+            if len(band_idx) == 0:
+                continue
+            peak_db        = 10 * np.log10(np.max(power[band_idx]) + 1e-12)
+            mask[band_idx] = 10 ** ((peak_db - spreading_db) / 10)
+
+        surviving = np.where(power >= mask)[0]
+        top_idx   = surviving[np.argsort(power[surviving])[::-1][:k]] \
+                    if len(surviving) > k else surviving
+
+        if len(top_idx) == 0:
+            frames_encoded.append((0.0, np.array([], dtype=np.uint16),
+                                   np.array([], dtype=dtype)))
+            continue
+
+        max_val = np.max(np.abs(C[top_idx])) + 1e-12
+        quant   = np.round(C[top_idx] / max_val * levels).astype(dtype)
+        frames_encoded.append((max_val, top_idx.astype(np.uint16), quant))
+        all_quant_vals.extend(quant.tolist())
+
+    codebook = huffman_build(all_quant_vals) if all_quant_vals else {}
+
+    with open(path, "wb") as f:
+        f.write(struct.pack("iiii", frame_size, k, bits, len(signal)))
+        f.write(struct.pack("i", len(codebook)))
+        for sym, code in codebook.items():
+            code_bytes = code.encode()
+            f.write(struct.pack("hH", sym, len(code_bytes)))
+            f.write(code_bytes)
+        for max_val, idx, quant in frames_encoded:
+            f.write(struct.pack("fH", max_val, len(idx)))
+            if len(idx) == 0:
+                continue
+            f.write(idx.tobytes())
+            encoded_bytes, pad = huffman_encode_bits(quant.tolist(), codebook)
+            f.write(struct.pack("H", pad))
+            f.write(struct.pack("I", len(encoded_bytes)))
+            f.write(encoded_bytes)
+
+    return os.path.getsize(path) / 1024
+
+def encode_psycho_huffman_plus(signal, sr, frame_size, k, spreading_db=36, bits=8, path="out.bin"):
+    hop    = frame_size // 2
+    window = np.sin(np.pi / frame_size * (np.arange(frame_size) + 0.5))
+    bands  = bark_bands(frame_size, sr)
+    levels = min(2 ** (bits - 1) - 1, 63)
+    dtype  = np.int8
+
+    frames_encoded = []
+    all_quant_vals = []
+
+    for start in range(0, len(signal) - frame_size, hop):
+        frame = signal[start:start + frame_size] * window
+        C     = dct(frame, norm="ortho")
+        power = C ** 2
+
+        mask = np.zeros(frame_size)
+        for band_idx in bands:
+            if len(band_idx) == 0:
+                continue
+            peak_db        = 10 * np.log10(np.max(power[band_idx]) + 1e-12)
+            mask[band_idx] = 10 ** ((peak_db - spreading_db) / 10)
+
+        surviving = np.where(power >= mask)[0]
+        top_idx   = surviving[np.argsort(power[surviving])[::-1][:k]] \
+                    if len(surviving) > k else surviving
+
+        if len(top_idx) == 0:
+            frames_encoded.append((0.0, np.array([], dtype=np.uint16),
+                                   np.array([], dtype=dtype)))
+            continue
+
+        max_val = np.max(np.abs(C[top_idx])) + 1e-12
+        quant   = np.round(C[top_idx] / max_val * levels).astype(dtype)
+        quant[np.abs(quant) < 2] = 0
+
+        frames_encoded.append((max_val, top_idx.astype(np.uint16), quant))
+        all_quant_vals.extend(quant.tolist())
+
+    codebook = huffman_build(all_quant_vals) if all_quant_vals else {}
+
+    with open(path, "wb") as f:
+        f.write(struct.pack("iiii", frame_size, k, bits, len(signal)))
+        f.write(struct.pack("i", len(codebook)))
+        for sym, code in codebook.items():
+            code_bytes = code.encode()
+            f.write(struct.pack("hH", sym, len(code_bytes)))
+            f.write(code_bytes)
+        for max_val, idx, quant in frames_encoded:
+            f.write(struct.pack("fH", max_val, len(idx)))
+            if len(idx) == 0:
+                continue
+            f.write(idx.tobytes())
+            encoded_bytes, pad = huffman_encode_bits(quant.tolist(), codebook)
+            f.write(struct.pack("H", pad))
+            f.write(struct.pack("I", len(encoded_bytes)))
+            f.write(encoded_bytes)
+
+    return os.path.getsize(path) / 1024
+
+def decode_psycho_huffman(path):
+    with open(path, "rb") as f:
+        frame_size, k, bits, signal_len = struct.unpack("iiii", f.read(16))
+        levels = 2 ** (bits - 1) - 1
+        hop    = frame_size // 2
+        window = np.sin(np.pi / frame_size * (np.arange(frame_size) + 0.5))
+
+        n_syms   = struct.unpack("i", f.read(4))[0]
+        codebook = {}
+        for _ in range(n_syms):
+            sym, code_len = struct.unpack("hH", f.read(4))
+            code = f.read(code_len).decode()
+            codebook[sym] = code
+
+        output  = np.zeros(signal_len + frame_size)
+        weights = np.zeros(signal_len + frame_size)
+
+        start = 0
+        while start < signal_len - frame_size:
+            max_val, n_idx = struct.unpack("fH", f.read(6))
+            if n_idx == 0:
+                start += hop
+                continue
+            idx           = np.frombuffer(f.read(n_idx * 2), dtype=np.uint16)
+            pad           = struct.unpack("H", f.read(2))[0]
+            n_enc_bytes   = struct.unpack("I", f.read(4))[0]
+            encoded_bytes = f.read(n_enc_bytes)
+            quant         = huffman_decode_bits(encoded_bytes, pad, codebook, n_idx)
+
+            C_red       = np.zeros(frame_size)
+            C_red[idx]  = np.array(quant, dtype=np.float32) / levels * max_val
+            rec         = idct(C_red, norm="ortho")
+            output[start:start + frame_size]  += rec * window
+            weights[start:start + frame_size] += window ** 2
+            start += hop
+
+    weights[weights == 0] = 1
+    return (output / weights)[:signal_len]
