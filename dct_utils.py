@@ -431,3 +431,11 @@ def decode_psycho_huffman(path):
 
     weights[weights == 0] = 1
     return (output / weights)[:signal_len]
+
+def generate_note(freq, sr=48000, duration=1.5):
+    t   = np.linspace(0, duration, int(sr * duration))
+    sig = (np.sin(2*np.pi*freq*t) +
+           0.5*np.sin(4*np.pi*freq*t) +
+           0.25*np.sin(6*np.pi*freq*t))
+    env = np.exp(-t * 1.5)
+    return (sig * env / np.max(np.abs(sig * env))).astype(np.float32)
