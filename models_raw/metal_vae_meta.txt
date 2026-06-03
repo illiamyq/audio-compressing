@@ -1,0 +1,8 @@
+model_name=metal_vae
+type=VAE
+frame_size=512
+bottleneck=64
+kl_weight=0.0001
+epochs_trained=20
+n_files=99
+n_frames=255682

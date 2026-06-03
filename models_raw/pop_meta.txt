@@ -1,0 +1,110 @@
+model_name=pop
+frame_size=256
+bottleneck=32
+epochs_trained=40
+final_train_loss=0.007457
+final_val_loss=0.008043
+n_files=100
+n_frames=516600
+data_path=data/pop
+files_used=
+  data/pop\pop.00000.wav
+  data/pop\pop.00001.wav
+  data/pop\pop.00002.wav
+  data/pop\pop.00003.wav
+  data/pop\pop.00004.wav
+  data/pop\pop.00005.wav
+  data/pop\pop.00006.wav
+  data/pop\pop.00007.wav
+  data/pop\pop.00008.wav
+  data/pop\pop.00009.wav
+  data/pop\pop.00010.wav
+  data/pop\pop.00011.wav
+  data/pop\pop.00012.wav
+  data/pop\pop.00013.wav
+  data/pop\pop.00014.wav
+  data/pop\pop.00015.wav
+  data/pop\pop.00016.wav
+  data/pop\pop.00017.wav
+  data/pop\pop.00018.wav
+  data/pop\pop.00019.wav
+  data/pop\pop.00020.wav
+  data/pop\pop.00021.wav
+  data/pop\pop.00022.wav
+  data/pop\pop.00023.wav
+  data/pop\pop.00024.wav
+  data/pop\pop.00025.wav
+  data/pop\pop.00026.wav
+  data/pop\pop.00027.wav
+  data/pop\pop.00028.wav
+  data/pop\pop.00029.wav
+  data/pop\pop.00030.wav
+  data/pop\pop.00031.wav
+  data/pop\pop.00032.wav
+  data/pop\pop.00033.wav
+  data/pop\pop.00034.wav
+  data/pop\pop.00035.wav
+  data/pop\pop.00036.wav
+  data/pop\pop.00037.wav
+  data/pop\pop.00038.wav
+  data/pop\pop.00039.wav
+  data/pop\pop.00040.wav
+  data/pop\pop.00041.wav
+  data/pop\pop.00042.wav
+  data/pop\pop.00043.wav
+  data/pop\pop.00044.wav
+  data/pop\pop.00045.wav
+  data/pop\pop.00046.wav
+  data/pop\pop.00047.wav
+  data/pop\pop.00048.wav
+  data/pop\pop.00049.wav
+  data/pop\pop.00050.wav
+  data/pop\pop.00051.wav
+  data/pop\pop.00052.wav
+  data/pop\pop.00053.wav
+  data/pop\pop.00054.wav
+  data/pop\pop.00055.wav
+  data/pop\pop.00056.wav
+  data/pop\pop.00057.wav
+  data/pop\pop.00058.wav
+  data/pop\pop.00059.wav
+  data/pop\pop.00060.wav
+  data/pop\pop.00061.wav
+  data/pop\pop.00062.wav
+  data/pop\pop.00063.wav
+  data/pop\pop.00064.wav
+  data/pop\pop.00065.wav
+  data/pop\pop.00066.wav
+  data/pop\pop.00067.wav
+  data/pop\pop.00068.wav
+  data/pop\pop.00069.wav
+  data/pop\pop.00070.wav
+  data/pop\pop.00071.wav
+  data/pop\pop.00072.wav
+  data/pop\pop.00073.wav
+  data/pop\pop.00074.wav
+  data/pop\pop.00075.wav
+  data/pop\pop.00076.wav
+  data/pop\pop.00077.wav
+  data/pop\pop.00078.wav
+  data/pop\pop.00079.wav
+  data/pop\pop.00080.wav
+  data/pop\pop.00081.wav
+  data/pop\pop.00082.wav
+  data/pop\pop.00083.wav
+  data/pop\pop.00084.wav
+  data/pop\pop.00085.wav
+  data/pop\pop.00086.wav
+  data/pop\pop.00087.wav
+  data/pop\pop.00088.wav
+  data/pop\pop.00089.wav
+  data/pop\pop.00090.wav
+  data/pop\pop.00091.wav
+  data/pop\pop.00092.wav
+  data/pop\pop.00093.wav
+  data/pop\pop.00094.wav
+  data/pop\pop.00095.wav
+  data/pop\pop.00096.wav
+  data/pop\pop.00097.wav
+  data/pop\pop.00098.wav
+  data/pop\pop.00099.wav

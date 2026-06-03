@@ -1,0 +1,7 @@
+type=denoising_ae
+frame_size=512
+bottleneck=64
+noise=0.3
+epochs_trained=38
+n_files=98
+n_frames=253036
