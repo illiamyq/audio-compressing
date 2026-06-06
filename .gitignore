@@ -3,3 +3,7 @@ outputs/
 .idea/
 data/
 archive/
+samples/
+
+comparison_output/
+models_raw/

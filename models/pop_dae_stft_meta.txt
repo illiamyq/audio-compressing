@@ -1,0 +1,11 @@
+type=DAE_STFT
+architecture=[513,128,16,128,513]
+n_fft=1024
+hop_length=512
+enc_dim=16
+hidden=128
+threshold_db=-100.0
+sr=22050
+epochs_trained=200
+n_files=98
+n_frames=126714
