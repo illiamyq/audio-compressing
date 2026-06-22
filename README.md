@@ -1,3 +1,4 @@
+Research on audio compressing with standart MP3, AAC inspired methods and various autoencoders.Visualization ([Visualisation in React](https://github.com/illiamyq/audio-compressing-visualization)) repository.
 <img width="1341" height="493" alt="Zrzut ekranu 2026-04-25 113143" src="https://github.com/user-attachments/assets/9ae57b11-7b28-42b9-83d2-23aafd4d7a4a" />
 
 <img width="1448" height="499" alt="Zrzut ekranu 2026-04-25 113155" src="https://github.com/user-attachments/assets/19041943-6a0e-407a-94f9-663c0d4195d7" />
